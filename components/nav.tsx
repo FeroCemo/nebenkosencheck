@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { User } from "@supabase/supabase-js";
 
 interface NavProps {
   user?: { email?: string } | null;
 }
 
-export function Nav({ user }: NavProps) {
+export function Nav({ user: initialUser }: NavProps) {
   const router = useRouter();
   const supabase = createClient();
+  const [user, setUser] = useState<User | null | undefined>(initialUser as User | null | undefined);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    return () => subscription.unsubscribe();
+  }, []);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
